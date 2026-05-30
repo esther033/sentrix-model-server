@@ -1,0 +1,87 @@
+schema_version: v1
+
+window:
+  size_seconds: 300
+  step_seconds: 30
+  statistics:
+    - mean
+    - std
+    - max
+    - min
+    - slope
+
+fault_types:
+  - NORMAL
+  - HIGH_CPU
+  - MEMORY_PRESSURE
+  - LATENCY_SPIKE
+  - ERROR_SPIKE
+
+raw_features:
+  - name: request_rate
+    unit: requests_per_second
+    related_faults: []
+
+  - name: latency_p95
+    unit: seconds
+    related_faults: [LATENCY_SPIKE]
+
+  - name: latency_p99
+    unit: seconds
+    related_faults: [LATENCY_SPIKE]
+
+  - name: error_rate
+    unit: ratio
+    related_faults: [ERROR_SPIKE]
+
+  - name: process_cpu_usage
+    unit: ratio
+    related_faults: [HIGH_CPU]
+
+  - name: system_cpu_usage
+    unit: ratio
+    related_faults: [HIGH_CPU]
+
+  - name: jvm_memory_used
+    unit: bytes
+    related_faults: [MEMORY_PRESSURE]
+
+  - name: jvm_memory_max_ratio
+    unit: ratio
+    related_faults: [MEMORY_PRESSURE]
+
+  - name: hikaricp_active
+    unit: count
+    related_faults: []
+
+  - name: hikaricp_pending
+    unit: count
+    related_faults: []
+
+  - name: executor_active_threads
+    unit: count
+    related_faults: []
+
+# rule-based evidence: fault type별 주요 feature
+evidence_rules:
+  HIGH_CPU:
+    - process_cpu_usage_mean
+    - process_cpu_usage_max
+    - system_cpu_usage_mean
+    - system_cpu_usage_max
+  MEMORY_PRESSURE:
+    - jvm_memory_max_ratio_mean
+    - jvm_memory_max_ratio_max
+    - jvm_memory_used_max
+    - jvm_memory_used_slope
+  LATENCY_SPIKE:
+    - latency_p99_max
+    - latency_p99_mean
+    - latency_p95_max
+    - latency_p95_mean
+  ERROR_SPIKE:
+    - error_rate_max
+    - error_rate_mean
+    - latency_p95_max
+    - latency_p99_max
+  NORMAL: []
