@@ -24,12 +24,19 @@ def run_inference(
     X_scaled = model_loader.scaler.transform(X)
 
     # 2. Anomaly Detection (Isolation Forest)
-    raw_score    = model_loader.detector.score_samples(X_scaled)[0]
-    # score_samples 값의 범위를 0~1로 정규화하기 위해 학습 시 min/max를 쓰는 게 이상적이나,
-    # 여기선 단순하게 IF의 decision_function을 변환
-    # decision_function: 양수 = 정상, 음수 = 이상
-    anomaly_score = float(1 / (1 + np.exp(raw_score * 10)))  # sigmoid 변환 → 0~1
-    anomaly_score = round(anomaly_score, 4)
+    raw_score = float(model_loader.detector.score_samples(X_scaled)[0])
+
+    # 학습 데이터 기준 min-max 정규화 → 0~1 (높을수록 이상)
+    score_min = model_loader.metadata["score_min"]
+    score_max = model_loader.metadata["score_max"]
+
+    if score_max != score_min:
+        normalized    = (raw_score - score_min) / (score_max - score_min)
+        anomaly_score = float(1.0 - normalized)  # 낮을수록 이상 → 반전
+    else:
+        anomaly_score = 0.0
+
+    anomaly_score = round(float(np.clip(anomaly_score, 0.0, 1.0)), 4)
 
     threshold    = model_loader.threshold
     is_anomaly   = anomaly_score > threshold
@@ -58,6 +65,12 @@ def run_inference(
         )
         for i in sorted_idx
     ]
+
+    # detection이 NORMAL이면 classification 결과 무시하고 NORMAL로 오버라이드
+    if det_status == "NORMAL":
+        fault_type = "NORMAL"
+        confidence = 1.0
+        top3 = [FaultTypeConfidence(faultType="NORMAL", confidence=1.0)]
 
     classification = ClassificationResult(
         faultType=fault_type,
