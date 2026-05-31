@@ -1,0 +1,9 @@
+services:
+  sentrix-model-server:
+    build: .
+    container_name: sentrix-model-server
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+    restart: unless-stopped
